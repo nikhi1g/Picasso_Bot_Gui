@@ -20,7 +20,7 @@ def take_picture():  # takes a picture, in a thread later on
     global pause
     picture = cv2.VideoCapture(0)
     result = True
-    while (result):
+    while result:
         ret, frame = picture.read()
         final_picture = np.fliplr(frame)
         cv2.imwrite("picassopicture.jpg", final_picture)
@@ -40,9 +40,17 @@ class CamApp(App):  # build for kivy display
     '''
     button_shade = 1
     button_paused_shade = 0.5
+
     picture_button_text = 'Take Image'
     retake_button_text = 'Retake Image'
     print_button_text = 'Print'
+
+    picture_button_color = (1, 0, 1, button_shade)
+    retake_button_color = (0, 0, 1, button_paused_shade)
+    print_button_color = (0, 1, 0, button_paused_shade)
+
+    button_font_size = 88
+
     disable_all_buttons = False
     '''
     End Colors and Shading
@@ -58,18 +66,23 @@ class CamApp(App):  # build for kivy display
         Clock.schedule_interval(self.update, 1.0 / 33.0)
 
         # end cv2stuff
-        def change_shade(button, num):  # allows to change the brightness of button
+        def change_shade(button, num):  # allows to change the brightness of button, could become irrelevant
             if 0 <= num <= 1:
                 button.background_color[-1] = num
             else:
                 pass
 
-        def disable_enable(button, bolean):  # allows to disable or enable a single button
-            button.disabled = bolean
-            if not bolean:
-                button.background_color[-1] = self.button_paused_shade
+        def disable(button):  # allows to disable or enable a single button
+            button.disabled = True
+            button.background_color[-1] = self.button_paused_shade
+
+        def enable(button):  # allows to disable or enable a single button
+            button.disabled = False
+            button.background_color[-1] = self.button_shade
 
         def enable_all_buttons():
+            for button in button_array:
+                button.disabled = False
             change_shade(print_button, self.button_paused_shade)
             change_shade(picture_button, self.button_shade)
             change_shade(retake_button, self.button_paused_shade)
@@ -80,39 +93,43 @@ class CamApp(App):  # build for kivy display
                 button.disabled = True
 
         def take_picture_button(instance):  # changes ui, starts thread to take picture, as defined in GLOBALS
-            change_shade(print_button, self.button_shade)
-            change_shade(retake_button, self.button_shade)
-            change_shade(picture_button, self.button_paused_shade)
+            disable(picture_button)
+            enable(retake_button)
+            enable(print_button)
+
             print('pic taken, see picassopicture.jpg')
             Thread(target=take_picture).start()
 
         def retake_picture_button(instance):  # changes ui accordingly, pauses the camera
             global pause
             pause = False
-            change_shade(print_button, self.button_paused_shade)
-            change_shade(picture_button, self.button_shade)
-            change_shade(retake_button, self.button_paused_shade)
+            disable(print_button)
+            enable(picture_button)
+            disable(retake_button)
 
         def printing(instance):  # disables all buttons upon print press
             disable_all_buttons()
             print('start print actions here')
 
         picture_button = Button(size_hint=(0.5, 0.2), text=self.picture_button_text,
-                                font_size=50, on_press=take_picture_button,
-                                background_color=(0.5, 0, 0.545, self.button_shade), pos=(0, 0),
+                                font_size=self.button_font_size, on_press=take_picture_button,
+                                background_color=self.picture_button_color, pos=(0, 0),
                                 disabled=self.disable_all_buttons)
 
         print_button = Button(pos=(0, 960), size_hint=(1, 0.2),
-                              background_color=(0.8, 0.5, 0, self.button_paused_shade),
-                              on_press=printing, font_size=50, text=self.print_button_text,
+                              background_color=self.print_button_color,
+                              on_press=printing, font_size=self.button_font_size, text=self.print_button_text,
                               disabled=self.disable_all_buttons)
 
         retake_button = Button(size_hint=(0.5, 0.2), text=self.retake_button_text,
-                               font_size=50, on_press=retake_picture_button,
-                               background_color=(0, 0.545, 0.5, self.button_paused_shade), pos=(800, 0),
+                               font_size=self.button_font_size, on_press=retake_picture_button,
+                               background_color=self.retake_button_color, pos=(800, 0),
                                disabled=self.disable_all_buttons)
         # ui may break upon entering the pi's screen size, will adjust to screen size later
         button_array = [picture_button, print_button, retake_button]
+
+        disable(print_button)  # on start disabled, so first time users won't click the wrong button
+        disable(retake_button)
 
         layout.add_widget(picture_button)
         layout.add_widget(print_button)
